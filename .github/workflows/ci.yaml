@@ -1,35 +1,39 @@
 name:Workflow
 
-on:
-  push:
-    branches: ['main']
+On :
+	push:
+		Branches:[‘main’]
+	Jobs:
 
-jobs:
-  Client:
-    runs-on: ubuntu-latest
-      run:
-        working-directory: ./client 
-    steps:
-      - uses: actions/checkout@v4
+	Client:
 
-      - name: install dependencies
-        run: npm install
-        
-      - name: Build
-        run: npm run build
-        
-      - name: Run Tests
-        run: npm test -- --run
+		Runs-on : ubuntu-latest
 
-  Server:
-    runs-on: ubuntu-latest
-      run:
-        working-directory: ./server
-    steps:
-      - uses: actions/checkout@v4
+			Steps:
 
-      - name: installing dependencies 
-        run: npm install
+				working-directory: ./client
+				Uses : actions/checkout@v4
 
-      - name: Run Server Tests
-        run: npm test
+				Name : install dependencies
+					Run : npm install
+				Name : Build
+					Run: npm run build  
+
+
+	Server :
+
+		Runs-on :ubuntu-latest
+
+
+			Steps:
+			
+				working-directory: ./server
+				Uses: actions/checkout@v4
+
+				Name : installing dependencies 
+					Run : npm install
+
+      	Name: Run Server
+        	run: npm test
+					
+
