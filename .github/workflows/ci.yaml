@@ -1,8 +1,8 @@
 name:Workflow
 
-On :
-	push:
-		Branches:[‘main’]
+on:
+  push:
+    branches: ['main']
 	Jobs:
 
 	Client:
