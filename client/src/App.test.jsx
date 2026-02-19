@@ -2,17 +2,13 @@ import { render, screen } from '@testing-library/react';
 import App from './App';
 import { describe, it, expect, vi } from 'vitest';
 
-describe('App', () => {
-    it('renders ShopSmart title', () => {
-        // Mock fetch
-        global.fetch = vi.fn(() =>
-            Promise.resolve({
-                json: () => Promise.resolve({ status: 'ok', message: 'Test Msg', timestamp: 'now' })
-            })
-        );
-
+describe('Application Root', () => {
+    it('should render the main application title and initial state', async () => {
         render(<App />);
-        const linkElement = screen.getByText(/ShopSmart/i);
+        const linkElement = await screen.findByText(/ShopSmart/i);
         expect(linkElement).toBeInTheDocument();
+
+        // Check if mock data is displayed
+        expect(await screen.findByText(/Mocked Backend is healthy/i)).toBeInTheDocument();
     });
 });
