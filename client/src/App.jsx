@@ -1,36 +1,79 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react';
+import ProductCard from './components/ProductCard';
+import Cart from './components/Cart';
 
 function App() {
-    const [data, setData] = useState(null);
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [cartItems, setCartItems] = useState([]);
+    const [isCartOpen, setIsCartOpen] = useState(false);
 
     useEffect(() => {
-        const apiUrl = import.meta.env.VITE_API_URL || '';
-        fetch(`${apiUrl}/api/health`)
-            .then(res => res.json())
-            .then(data => setData(data))
-            .catch(err => console.error('Error fetching health check:', err));
+        const fetchProducts = async () => {
+            try {
+                // Point to backend standard port for local dev
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+                const response = await fetch(`${apiUrl}/api/products`);
+                if (!response.ok) {
+                   throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+                setProducts(data);
+            } catch (error) {
+                console.error('Error fetching products:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
     }, []);
 
+    const handleAddToCart = (product) => {
+        const cartItem = { ...product, cartId: crypto.randomUUID() };
+        setCartItems(prev => [...prev, cartItem]);
+        setIsCartOpen(true);
+    };
+
+    const handleRemoveFromCart = (cartId) => {
+        setCartItems(prev => prev.filter(item => item.cartId !== cartId));
+    };
+
     return (
-        <div className="container">
-            <h1>ShopSmart</h1>
-            <div className="card">
-                <h2>Backend Status</h2>
-                {data ? (
-                    <div>
-                        <p>Status: <span className="status-ok">{data.status}</span></p>
-                        <p>Message: {data.message}</p>
-                        <p>Timestamp: {data.timestamp}</p>
-                    </div>
+        <div className="app-container">
+            <header>
+                <h1 className="logo">ShopSmart</h1>
+                <button className="cart-button" onClick={() => setIsCartOpen(true)}>
+                    <span>Cart</span>
+                    {cartItems.length > 0 && <span className="cart-badge">{cartItems.length}</span>}
+                </button>
+            </header>
+
+            <main>
+                {loading ? (
+                    <div className="status-loading">Loading amazing products...</div>
                 ) : (
-                    <p>Loading backend status...</p>
+                    <div className="products-grid">
+                        {products.map((product, index) => (
+                            <ProductCard 
+                                key={product.id} 
+                                product={product} 
+                                index={index}
+                                onAddToCart={handleAddToCart} 
+                            />
+                        ))}
+                    </div>
                 )}
-            </div>
-            <p className="hint">
-                Edit <code>src/App.jsx</code> and save to test HMR
-            </p>
+            </main>
+
+            <Cart 
+                isOpen={isCartOpen} 
+                onClose={() => setIsCartOpen(false)} 
+                cartItems={cartItems}
+                onRemoveFromCart={handleRemoveFromCart}
+            />
         </div>
-    )
+    );
 }
 
-export default App
+export default App;
