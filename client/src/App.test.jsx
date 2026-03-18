@@ -8,7 +8,8 @@ describe('Application Root', () => {
         const linkElement = await screen.findByText(/ShopSmart/i);
         expect(linkElement).toBeInTheDocument();
 
-        // Check if mock data is displayed
-        expect(await screen.findByText(/Mocked Backend is healthy/i)).toBeInTheDocument();
+        // Check if loading state or cart is displayed
+        expect(await screen.findByText(/Loading amazing products/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Cart/i })).toBeInTheDocument();
     });
 });

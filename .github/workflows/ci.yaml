@@ -3,32 +3,45 @@ name: Workflow
 on:
   push:
     branches: ['main']
+  pull_request:
+    branches: ['main']
 
 jobs:
   Client:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./client
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: install dependencies
+      - name: Install dependencies
         run: npm install
-        working-directory: ./client
+
+      - name: Run Linting
+        run: npm run lint
+
+      - name: Run Tests
+        run: npm test
 
       - name: Build
         run: npm run build
-        working-directory: ./client
 
   Server:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./server
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: installing dependencies 
+      - name: Install dependencies 
         run: npm install
-        working-directory: ./server
+
+      - name: Run linting
+        run: npm run lint
 
       - name: Run Server
         run: npm test
-        working-directory: ./server
