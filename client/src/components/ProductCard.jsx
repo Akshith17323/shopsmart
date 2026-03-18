@@ -1,5 +1,3 @@
-import React from 'react';
-
 const ProductCard = ({ product, onAddToCart, index }) => {
   return (
     <div className="product-card" style={{ animationDelay: `${index * 100}ms` }}>
