@@ -9,6 +9,8 @@ on:
 jobs:
   Client:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
     defaults:
       run:
         working-directory: ./client
@@ -30,6 +32,8 @@ jobs:
 
   Server:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
     defaults:
       run:
         working-directory: ./server
