@@ -8,3 +8,17 @@ describe('GET /api/health', () => {
         expect(res.body).toHaveProperty('status', 'ok');
     });
 });
+
+describe('GET /api/products', () => {
+    it('should return 200 and an array of products', async () => {
+        const res = await request(app).get('/api/products');
+        expect(res.statusCode).toEqual(200);
+        expect(Array.isArray(res.body)).toBeTruthy();
+        expect(res.body.length).toBeGreaterThan(0);
+        
+        // Assert the mock product structure is valid
+        expect(res.body[0]).toHaveProperty('id');
+        expect(res.body[0]).toHaveProperty('name');
+        expect(res.body[0]).toHaveProperty('price');
+    });
+});
