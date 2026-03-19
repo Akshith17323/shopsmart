@@ -21,7 +21,7 @@ afterAll(() => server.close());
 describe('Application Root & Integration', () => {
     it('should render the main application title and initial state', async () => {
         render(<App />);
-        const linkElement = await screen.findByText(/ShopSmart/i);
+        const linkElement = await screen.findByRole('heading', { level: 1, name: /ShopSmart/i });
         expect(linkElement).toBeInTheDocument();
 
         // Check if the cart button is universally displayed
