@@ -1,0 +1,60 @@
+version: 2
+
+updates:
+  # 🔵 Frontend (client)
+  - package-ecosystem: "npm"
+    directory: "/client"
+    target-branch: "testing"
+    schedule:
+      interval: "weekly"
+
+    open-pull-requests-limit: 5
+
+    labels:
+      - "dependencies"
+      - "frontend"
+
+    commit-message:
+      prefix: "deps(frontend)"
+
+    groups:
+      frontend-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+
+  # 🟢 Backend (server)
+  - package-ecosystem: "npm"
+    directory: "/server"
+    target-branch: "testing"
+    schedule:
+      interval: "weekly"
+
+    open-pull-requests-limit: 5
+
+    labels:
+      - "dependencies"
+      - "backend"
+
+    commit-message:
+      prefix: "deps(backend)"
+
+    groups:
+      backend-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"

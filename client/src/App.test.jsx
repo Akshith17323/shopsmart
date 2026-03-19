@@ -25,7 +25,7 @@ describe('Application Root & Integration', () => {
         expect(linkElement).toBeInTheDocument();
 
         // Check if the cart button is universally displayed
-        expect(screen.getByRole('button', { name: /Cart/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /^Cart$/i })).toBeInTheDocument();
     });
 
     it('successfully fetches API data and triggers integration with the Cart module', async () => {
