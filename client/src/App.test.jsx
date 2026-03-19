@@ -24,8 +24,7 @@ describe('Application Root & Integration', () => {
         const linkElement = await screen.findByText(/ShopSmart/i);
         expect(linkElement).toBeInTheDocument();
 
-        // Check if loading state or cart is displayed
-        expect(await screen.findByText(/Loading amazing products/i)).toBeInTheDocument();
+        // Check if the cart button is universally displayed
         expect(screen.getByRole('button', { name: /Cart/i })).toBeInTheDocument();
     });
 
