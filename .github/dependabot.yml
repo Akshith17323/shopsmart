@@ -1,7 +1,7 @@
 version: 2
 
 updates:
-  # 🔵 Frontend (client)
+  # Frontend (client)
   - package-ecosystem: "npm"
     directory: "/client"
     target-branch: "testing"
@@ -30,7 +30,7 @@ updates:
         update-types:
           - "version-update:semver-major"
 
-  # 🟢 Backend (server)
+  # Backend (server)
   - package-ecosystem: "npm"
     directory: "/server"
     target-branch: "testing"

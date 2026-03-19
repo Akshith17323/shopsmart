@@ -7,6 +7,7 @@ function App() {
     const [loading, setLoading] = useState(true);
     const [cartItems, setCartItems] = useState([]);
     const [isCartOpen, setIsCartOpen] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -15,7 +16,7 @@ function App() {
                 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
                 const response = await fetch(`${apiUrl}/api/products`);
                 if (!response.ok) {
-                   throw new Error('Network response was not ok');
+                    throw new Error('Network response was not ok');
                 }
                 const data = await response.json();
                 setProducts(data);
@@ -41,30 +42,58 @@ function App() {
 
     return (
         <div className="app-container">
-            <header>
-                <h1 className="logo">ShopSmart</h1>
-                <button className="cart-button" onClick={() => setIsCartOpen(true)}>
-                    <span>Cart</span>
-                    {cartItems.length > 0 && <span className="cart-badge">{cartItems.length}</span>}
-                </button>
-            </header>
+            <nav className="navbar">
+                <div className="nav-brand">
+                    <h1 className="logo">ShopSmart</h1>
+                </div>
+                <ul className="nav-links">
+                    <li><a href="#products">Products</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+                <div className="header-controls">
+                    {isLoggedIn ? (
+                        <button className="logout-button" onClick={() => setIsLoggedIn(false)}>Logout</button>
+                    ) : (
+                        <button className="login-button" onClick={() => setIsLoggedIn(true)}>Login</button>
+                    )}
+                    <button className="cart-button" onClick={() => setIsCartOpen(true)}>
+                        <span>Cart</span>
+                        {cartItems.length > 0 && <span className="cart-badge">{cartItems.length}</span>}
+                    </button>
+                </div>
+            </nav>
 
             <main>
-                {loading ? (
-                    <div className="status-loading">Loading amazing products...</div>
-                ) : (
-                    <div className="products-grid">
-                        {products.map((product, index) => (
-                            <ProductCard 
-                                key={product.id} 
-                                product={product} 
-                                index={index}
-                                onAddToCart={handleAddToCart} 
-                            />
-                        ))}
-                    </div>
-                )}
+                <section id="products" className="products-section">
+                    <h2 className="section-title">Featured Gear</h2>
+                     {loading ? (
+                        <div className="status-loading">Loading amazing products...</div>
+                    ) : (
+                        <div className="products-grid">
+                            {products.map((product, index) => (
+                                <ProductCard 
+                                    key={product.id} 
+                                    product={product} 
+                                    index={index}
+                                    onAddToCart={handleAddToCart} 
+                                />
+                            ))}
+                        </div>
+                    )}
+                </section>
             </main>
+
+            <footer className="footer">
+                <div className="footer-content">
+                    <div className="footer-brand">
+                        <h2 className="logo">ShopSmart</h2>
+                        <p>Providing premium gear for modern professionals.</p>
+                    </div>
+                </div>
+                <div className="footer-bottom">
+                    <p>&copy; 2026 ShopSmart. All rights reserved.</p>
+                </div>
+            </footer>
 
             <Cart 
                 isOpen={isCartOpen} 
