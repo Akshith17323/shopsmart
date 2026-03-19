@@ -15,7 +15,7 @@ jobs:
 
         with:
           host: ${{ secrets.EC2_HOST }}
-          key: ${{ secrets.Ec2_SSH_KEY }}
+          key: ${{ secrets.EC2_SSH_KEY }}
           script_stop: true
           script: |
             cd /home/ubuntu/shopsmart

@@ -30,7 +30,7 @@ jobs:
         run: npm run build
         working-directory: ./client
         env:
-          VITE_API_URL: ${{ secrets.PROD_API_URL }} 
+          VITE_API_URL: ${{ secrets.PROD_API_URL }}
 
       - name: Secure GitHub Pages Action Initialization
         uses: peaceiris/actions-gh-pages@v4
