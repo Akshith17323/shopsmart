@@ -1,4 +1,4 @@
-name: Deploy Image.html to EC2 (Ubuntu + Nginx)
+name: Deploy ShopSmart to EC2 (Ubuntu + Nginx)
 
 on:
   push:
@@ -35,7 +35,7 @@ jobs:
         run: |
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy client to EC2 nginx root
+      - name: Deploy ShopSmart to EC2 nginx root
         run: |
           # Copy the BUILT dist folder over SCP 
           scp -i ~/.ssh/ec2_key.pem -r client/dist ubuntu@${{ secrets.EC2_HOST }}:/tmp/client_dist
