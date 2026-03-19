@@ -8,7 +8,7 @@ const ProductCard = ({ product, onAddToCart, index }) => {
         <div className="product-footer">
           <span className="product-price">${product.price.toFixed(2)}</span>
           <button className="add-button" onClick={() => onAddToCart(product)}>
-            Add to Cart
+            Add to Carts
           </button>
         </div>
       </div>
