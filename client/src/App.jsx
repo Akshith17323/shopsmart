@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import ProductCard from './components/ProductCard';
 import Cart from './components/Cart';
+import ContactForm from './components/ContactForm';
 
 function App() {
     const [products, setProducts] = useState([]);
@@ -64,6 +65,14 @@ function App() {
             </nav>
 
             <main>
+                <section className="hero-section">
+                    <div className="hero-content">
+                        <h1>Elevate Your Every Day</h1>
+                        <p>Discover a curated collection of premium gear designed for the modern professional. Uncompromising quality meets timeless minimalist design.</p>
+                        <a href="#products" className="hero-cta">Explore the Collection</a>
+                    </div>
+                </section>
+
                 <section id="products" className="products-section">
                     <h2 className="section-title">Featured Gear</h2>
                      {loading ? (
@@ -80,6 +89,10 @@ function App() {
                             ))}
                         </div>
                     )}
+                </section>
+
+                <section id="contact" className="contact-section">
+                    <ContactForm />
                 </section>
             </main>
 
