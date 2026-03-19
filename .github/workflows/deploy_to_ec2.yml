@@ -20,6 +20,5 @@ jobs:
           script_stop: true
           script: |
             cd /home/ubuntu/shopsmart
-            git pull origin main
             chmod +x scripts/deploy.sh
             ./scripts/deploy.sh
