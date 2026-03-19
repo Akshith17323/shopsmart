@@ -1,0 +1,55 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  run-unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      # --- Backend Unit Tests ---
+      - name: Install Backend Dependencies
+        run: npm install
+        working-directory: ./server 
+
+      - name: Run Backend Linting
+        run: npm run lint
+        working-directory: ./server
+
+      - name: Run Backend Unit Tests (Jest)
+        run: npm test
+        working-directory: ./server
+        env:
+          NODE_ENV: test
+
+      # --- Frontend Unit Tests ---
+      - name: Install Frontend Dependencies
+        run: npm install
+        working-directory: ./client
+
+      - name: Run Frontend Linting
+        run: npm run lint
+        working-directory: ./client
+
+      - name: Run Frontend Unit Tests (Vitest)
+        run: npm run test:unit
+        working-directory: ./client
+        env:
+          CI: true

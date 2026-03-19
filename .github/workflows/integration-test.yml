@@ -1,0 +1,35 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  run-integration-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install Frontend Dependencies
+        run: npm install
+        working-directory: ./client
+
+      - name: Run Frontend Integration Tests (Vitest & MSW)
+        run: npm run test:integration
+        working-directory: ./client
+        env:
+          CI: true
