@@ -1,0 +1,40 @@
+name: Deploy React App to GitHub Pages
+
+on:
+  push:
+    branches: [ main, testing ]
+  workflow_dispatch:
+
+# Grant Github permissions to explicitly edit code for the deployment branches
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Formulate Node Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Frontend Dependencies
+        run: npm install
+        working-directory: ./client
+
+      - name: Inject Production Artifact Compilation
+        run: npm run build
+        working-directory: ./client
+        env:
+          VITE_API_URL: ${{ secrets.PROD_API_URL }} 
+
+      - name: Secure GitHub Pages Action Initialization
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./client/dist
+          commit_message: "Automated GitHub Pages Deployment via Action Pipeline"
