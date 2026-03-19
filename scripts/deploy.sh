@@ -8,7 +8,7 @@ cd server
 npm install
 
 echo "Restarting backend"
-pkill node || true  # Using true ensures script doesn't fail if node isn't running
+pkill node || true  
 nohup node src/index.js > server.log 2>&1 &
 
 cd ..
