@@ -28,3 +28,11 @@ jobs:
         working-directory: ./client
         env:
           CI: true
+        
+      - name: Store the logs of the test
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration_tests_logs
+          path: logs/*
+          overwrite: true
+          retention-days: 30

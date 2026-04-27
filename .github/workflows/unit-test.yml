@@ -33,6 +33,14 @@ jobs:
         env:
           NODE_ENV: test
 
+      - name: Store the logs of the test
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend_unit_tests_logs
+          path: logs/*
+          overwrite: true
+          retention-days: 30
+
   frontend-tests:
     runs-on: ubuntu-latest
 
@@ -58,3 +66,10 @@ jobs:
         working-directory: ./client
         env:
           CI: true
+      - name: Store the logs of the test
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend_tests_logs
+          path: logs/*
+          overwrite: true
+          retention-days: 30

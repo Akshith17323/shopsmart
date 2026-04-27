@@ -39,6 +39,3 @@ jobs:
           publish_dir: ./client/dist
           commit_message: "Automated GitHub Pages Deployment via Action Pipeline"
 
-
-
-
