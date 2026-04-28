@@ -30,9 +30,10 @@ jobs:
           CI: true
         
       - name: Store the logs of the test
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: integration_tests_logs
-          path: logs/*
+          path: client/logs/
           overwrite: true
           retention-days: 30
