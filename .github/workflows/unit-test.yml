@@ -28,7 +28,9 @@ jobs:
         working-directory: ./server
 
       - name: Run Backend Unit Tests (Jest)
-        run: npm test
+        run: |
+          mkdir -p logs
+          npm test -- --json --outputFile=logs/jest-results.json
         working-directory: ./server
         env:
           NODE_ENV: test
@@ -63,7 +65,9 @@ jobs:
         working-directory: ./client
 
       - name: Run Frontend Unit Tests (Vitest)
-        run: npm run test:unit
+        run: |
+          mkdir -p logs
+          npm run test:unit -- --reporter=default --reporter=json --outputFile=logs/vitest-unit-results.json
         working-directory: ./client
         env:
           CI: true
