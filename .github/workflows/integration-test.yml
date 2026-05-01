@@ -24,7 +24,9 @@ jobs:
         working-directory: ./client
 
       - name: Run Frontend Integration Tests (Vitest & MSW)
-        run: npm run test:integration
+        run: |
+          mkdir -p logs
+          npm run test:integration -- --reporter=default --reporter=json --outputFile=logs/vitest-integration-results.json
         working-directory: ./client
         env:
           CI: true
