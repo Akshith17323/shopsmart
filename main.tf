@@ -16,7 +16,9 @@ provider "aws" {
 # S3 Bucket Configuration (Phase 2 Requirement)
 # ──────────────────────────────────────────
 resource "aws_s3_bucket" "app_bucket" {
-  bucket_prefix = "shopsmart-bucket-"
+  # Using a hardcoded, unique bucket name ensures idempotency.
+  # Terraform will recognize this specific bucket instead of creating a new one each run.
+  bucket        = "shopsmart-bucket-akshith17323"
   force_destroy = true
 
   tags = {
