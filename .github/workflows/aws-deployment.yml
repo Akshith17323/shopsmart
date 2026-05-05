@@ -190,7 +190,8 @@ jobs:
           # We dynamically fetch the Service ARN rather than relying on the short name
           SERVICE_ARN=$(aws ecs describe-services --cluster shopsmart-cluster --services shopsmart-service --query "services[0].serviceArn" --output text 2>/dev/null || echo "None")
           if [ "$SERVICE_ARN" != "None" ] && [ -n "$SERVICE_ARN" ]; then
-            terraform import aws_ecs_service.app $SERVICE_ARN 2>/dev/null || true
+            echo "Importing ECS Service with ARN: $SERVICE_ARN"
+            terraform import aws_ecs_service.app "shopsmart-cluster/shopsmart-service" || true
           fi
 
       - name: Terraform Plan
