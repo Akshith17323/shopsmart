@@ -20,9 +20,10 @@ FROM nginx:alpine
 
 # Requirement 2: Run as a non-root user (Using the built-in 'nginx' user UID 101)
 # Modify main nginx.conf to support non-root user by removing the user directive,
-# moving the PID file to /tmp, and moving all temp directories to /tmp.
+# explicitly moving the PID file to /tmp, and moving all temp directories to /tmp.
 RUN sed -i '/user  nginx;/d' /etc/nginx/nginx.conf && \
-    sed -i 's,/var/run/nginx.pid,/tmp/nginx.pid,' /etc/nginx/nginx.conf && \
+    sed -i '/^pid/d' /etc/nginx/nginx.conf && \
+    sed -i '1i pid /tmp/nginx.pid;' /etc/nginx/nginx.conf && \
     sed -i "/^http {/a \    proxy_temp_path /tmp/proxy_temp;\n    client_body_temp_path /tmp/client_temp;\n    fastcgi_temp_path /tmp/fastcgi_temp;\n    uwsgi_temp_path /tmp/uwsgi_temp;\n    scgi_temp_path /tmp/scgi_temp;\n" /etc/nginx/nginx.conf
 
 # Adjust permissions for Nginx to run as non-root
