@@ -2,9 +2,9 @@ name: AWS Deployment
 
 on:
   push:
-    branches: [ main, testing ]
+    branches: [main, testing]
   pull_request:
-    branches: [ main, testing ]
+    branches: [main, testing]
 
 permissions:
   contents: read
@@ -12,6 +12,7 @@ permissions:
 jobs:
   backend-testing:
     name: "Backend: Unit Testing & Linting"
+    needs: [frontend-testing]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -19,10 +20,10 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
       - name: Install Backend Dependencies
         run: npm install
-        working-directory: ./server 
+        working-directory: ./server
       - name: Run Backend Linting
         run: npm run lint
         working-directory: ./server
@@ -51,7 +52,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
       - name: Install Frontend Dependencies
         run: npm install
         working-directory: ./client
@@ -74,8 +75,9 @@ jobs:
           overwrite: true
           retention-days: 30
 
-  e2e-integration-testing:
-    name: "Frontend: E2E Integration Testing"
+  integration-testing:
+    name: "Frontend Integration Testing"
+    needs: [backend-testing]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -83,7 +85,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
       - name: Install Frontend Dependencies
         run: npm install
         working-directory: ./client
@@ -106,7 +108,9 @@ jobs:
   infrastructure-provisioning:
     name: "AWS: S3 Bucket Provisioning"
     runs-on: ubuntu-latest
-    needs: [backend-testing, frontend-testing, e2e-integration-testing]
+    needs: [integration-testing]
+    env:
+      TF_VAR_region: ${{ secrets.AWS_REGION }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -126,13 +130,128 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
+        working-directory: ./terraform
 
       - name: Terraform Validate
         run: terraform validate
+        working-directory: ./terraform
+
+      - name: Import Existing Infrastructure (Idempotency)
+        working-directory: ./terraform
+        run: |
+          echo "=== Attempting to adopt existing AWS resources into state ==="
+          
+          # 1. S3 Bucket (State backend)
+          terraform import aws_s3_bucket.app_bucket shopsmart-bucket-akshith17323 2>/dev/null || true
+          
+          # 2. ECR Repository
+          terraform import aws_ecr_repository.app shopsmart-repo 2>/dev/null || true
+          
+          # 3. CloudWatch Log Group
+          terraform import aws_cloudwatch_log_group.ecs_logs /ecs/shopsmart 2>/dev/null || true
+          
+          # 4. ECS Cluster
+          terraform import aws_ecs_cluster.main arn:aws:ecs:${{ secrets.AWS_REGION }}:112207593301:cluster/shopsmart-cluster 2>/dev/null || true
+          
+          # 5. VPC and related networking (Requires fetching IDs dynamically)
+          VPC_ID=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=shopsmart-vpc" --query "Vpcs[0].VpcId" --output text 2>/dev/null || echo "None")
+          if [ "$VPC_ID" != "None" ] && [ -n "$VPC_ID" ]; then
+            terraform import aws_vpc.main $VPC_ID 2>/dev/null || true
+            
+            # Subnets
+            SUBNET1=$(aws ec2 describe-subnets --filters "Name=tag:Name,Values=shopsmart-public-subnet-1" "Name=vpc-id,Values=$VPC_ID" --query "Subnets[0].SubnetId" --output text 2>/dev/null || echo "None")
+            [ "$SUBNET1" != "None" ] && [ -n "$SUBNET1" ] && terraform import aws_subnet.public_1 $SUBNET1 2>/dev/null || true
+            
+            SUBNET2=$(aws ec2 describe-subnets --filters "Name=tag:Name,Values=shopsmart-public-subnet-2" "Name=vpc-id,Values=$VPC_ID" --query "Subnets[0].SubnetId" --output text 2>/dev/null || echo "None")
+            [ "$SUBNET2" != "None" ] && [ -n "$SUBNET2" ] && terraform import aws_subnet.public_2 $SUBNET2 2>/dev/null || true
+            
+            # IGW
+            IGW_ID=$(aws ec2 describe-internet-gateways --filters "Name=tag:Name,Values=shopsmart-igw" --query "InternetGateways[0].InternetGatewayId" --output text 2>/dev/null || echo "None")
+            [ "$IGW_ID" != "None" ] && [ -n "$IGW_ID" ] && terraform import aws_internet_gateway.main $IGW_ID 2>/dev/null || true
+            
+            # Security Groups
+            ALB_SG=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=shopsmart-alb-sg" "Name=vpc-id,Values=$VPC_ID" --query "SecurityGroups[0].GroupId" --output text 2>/dev/null || echo "None")
+            [ "$ALB_SG" != "None" ] && [ -n "$ALB_SG" ] && terraform import aws_security_group.alb $ALB_SG 2>/dev/null || true
+            
+            ECS_SG=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=shopsmart-ecs-tasks-sg" "Name=vpc-id,Values=$VPC_ID" --query "SecurityGroups[0].GroupId" --output text 2>/dev/null || echo "None")
+            [ "$ECS_SG" != "None" ] && [ -n "$ECS_SG" ] && terraform import aws_security_group.ecs_tasks $ECS_SG 2>/dev/null || true
+          fi
+          
+          # 6. Load Balancer and Target Group
+          ALB_ARN=$(aws elbv2 describe-load-balancers --names shopsmart-alb --query "LoadBalancers[0].LoadBalancerArn" --output text 2>/dev/null || echo "None")
+          if [ "$ALB_ARN" != "None" ] && [ -n "$ALB_ARN" ]; then
+            terraform import aws_lb.main $ALB_ARN 2>/dev/null || true
+          fi
+          
+          TG_ARN=$(aws elbv2 describe-target-groups --names shopsmart-tg --query "TargetGroups[0].TargetGroupArn" --output text 2>/dev/null || echo "None")
+          [ "$TG_ARN" != "None" ] && [ -n "$TG_ARN" ] && terraform import aws_lb_target_group.app $TG_ARN 2>/dev/null || true
+          
+          # 7. ECS Service (The tricky one)
+          # We dynamically fetch the Service ARN rather than relying on the short name
+          SERVICE_ARN=$(aws ecs describe-services --cluster shopsmart-cluster --services shopsmart-service --query "services[0].serviceArn" --output text 2>/dev/null || echo "None")
+          if [ "$SERVICE_ARN" != "None" ] && [ -n "$SERVICE_ARN" ]; then
+            echo "Importing ECS Service with ARN: $SERVICE_ARN"
+            terraform import aws_ecs_service.app "shopsmart-cluster/shopsmart-service" || true
+          fi
 
       - name: Terraform Plan
         run: terraform plan -out=tfplan
+        working-directory: ./terraform
 
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve tfplan
+        working-directory: ./terraform
+
+  container-build-deploy:
+    name: "AWS: ECR Build & ECS Deploy"
+    runs-on: ubuntu-latest
+    needs: [infrastructure-provisioning]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: shopsmart-repo
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Build a docker container and push it to ECR
+          # Assumes the Dockerfile is in the root directory or adjust path accordingly
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Download Task Definition
+        run: |
+          aws ecs describe-task-definition --task-definition shopsmart-task \
+          --query taskDefinition > task-definition.json
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: shopsmart-container
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: shopsmart-service
+          cluster: shopsmart-cluster
+          wait-for-service-stability: true
