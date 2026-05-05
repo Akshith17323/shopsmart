@@ -2,9 +2,9 @@ name: AWS Deployment
 
 on:
   push:
-    branches: [ main, testing ]
+    branches: [main, testing]
   pull_request:
-    branches: [ main, testing ]
+    branches: [main, testing]
 
 permissions:
   contents: read
@@ -20,10 +20,10 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
       - name: Install Backend Dependencies
         run: npm install
-        working-directory: ./server 
+        working-directory: ./server
       - name: Run Backend Linting
         run: npm run lint
         working-directory: ./server
@@ -52,7 +52,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
       - name: Install Frontend Dependencies
         run: npm install
         working-directory: ./client
@@ -85,7 +85,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
       - name: Install Frontend Dependencies
         run: npm install
         working-directory: ./client
@@ -139,6 +139,15 @@ jobs:
       - name: Import State Bucket
         # We must import the bucket because Terraform uses it for state, so it cannot delete/recreate it!
         run: terraform import aws_s3_bucket.app_bucket shopsmart-bucket-akshith17323 || true
+        working-directory: ./terraform
+
+      - name: Import ECS Resources
+        run: |
+          # ECS Service
+          SERVICE_ARN=$(aws ecs describe-services --cluster shopsmart-cluster --services shopsmart-service --query "services[0].serviceArn" --output text 2>/dev/null || echo "None")
+          if [ "$SERVICE_ARN" != "None" ] && [ -n "$SERVICE_ARN" ]; then
+            terraform import aws_ecs_service.app $SERVICE_ARN 2>/dev/null || true
+          fi
         working-directory: ./terraform
 
       - name: Terraform Plan
