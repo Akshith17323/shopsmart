@@ -25,6 +25,10 @@ RUN addgroup -g 1001 -S appgroup && \
 # Adjust permissions for Nginx to run as non-root
 RUN chown -R appuser:appgroup /var/cache/nginx /var/run /var/log/nginx /usr/share/nginx/html /etc/nginx/conf.d
 
+# Modify main nginx.conf to support non-root user
+RUN sed -i '/user  nginx;/d' /etc/nginx/nginx.conf && \
+    sed -i 's,/var/run/nginx.pid,/tmp/nginx.pid,' /etc/nginx/nginx.conf
+
 # Copy the React build from Stage 1
 COPY --from=build --chown=appuser:appgroup /app/dist /usr/share/nginx/html
 
