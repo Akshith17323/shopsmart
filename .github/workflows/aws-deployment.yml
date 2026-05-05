@@ -75,8 +75,8 @@ jobs:
           overwrite: true
           retention-days: 30
 
-  e2e-integration-testing:
-    name: "Frontend: E2E Integration Testing"
+  integration-testing:
+    name: "Frontend Integration Testing"
     needs: [backend-testing]
     runs-on: ubuntu-latest
     steps:
@@ -108,7 +108,7 @@ jobs:
   infrastructure-provisioning:
     name: "AWS: S3 Bucket Provisioning"
     runs-on: ubuntu-latest
-    needs: [e2e-integration-testing]
+    needs: [integration-testing]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -132,6 +132,11 @@ jobs:
 
       - name: Terraform Validate
         run: terraform validate
+        working-directory: ./terraform
+
+      - name: Import Existing Resources (Idempotency Hack)
+        # If the runner lost state, this imports the bucket so Terraform knows it already exists.
+        run: terraform import aws_s3_bucket.app_bucket shopsmart-bucket-akshith17323 || true
         working-directory: ./terraform
 
       - name: Terraform Plan
