@@ -134,11 +134,6 @@ jobs:
         run: terraform validate
         working-directory: ./terraform
 
-      - name: Import Existing Resources (Idempotency Hack)
-        # If the runner lost state, this imports the bucket so Terraform knows it already exists.
-        run: terraform import aws_s3_bucket.app_bucket shopsmart-bucket-akshith17323 || true
-        working-directory: ./terraform
-
       - name: Terraform Plan
         run: terraform plan -out=tfplan
         working-directory: ./terraform

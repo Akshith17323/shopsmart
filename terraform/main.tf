@@ -6,6 +6,12 @@ terraform {
     }
   }
   required_version = ">= 1.3.0"
+
+  backend "s3" {
+    bucket = "shopsmart-bucket-akshith17323"
+    key    = "terraform/state.tfstate"
+    region = "us-east-1"
+  }
 }
 
 provider "aws" {
