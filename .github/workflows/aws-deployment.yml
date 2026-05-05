@@ -146,9 +146,11 @@ jobs:
           
           # 2. ECR Repository
           terraform import aws_ecr_repository.app shopsmart-repo 2>/dev/null || true
+          terraform import aws_ecr_repository.backend shopsmart-backend-repo 2>/dev/null || true
           
           # 3. CloudWatch Log Group
           terraform import aws_cloudwatch_log_group.ecs_logs /ecs/shopsmart 2>/dev/null || true
+          terraform import aws_cloudwatch_log_group.backend_logs /ecs/shopsmart-backend 2>/dev/null || true
           
           # 4. ECS Cluster
           terraform import aws_ecs_cluster.main arn:aws:ecs:${{ secrets.AWS_REGION }}:112207593301:cluster/shopsmart-cluster 2>/dev/null || true
@@ -185,6 +187,20 @@ jobs:
           
           TG_ARN=$(aws elbv2 describe-target-groups --names shopsmart-tg --query "TargetGroups[0].TargetGroupArn" --output text 2>/dev/null || echo "None")
           [ "$TG_ARN" != "None" ] && [ -n "$TG_ARN" ] && terraform import aws_lb_target_group.app $TG_ARN 2>/dev/null || true
+
+          BACKEND_TG_ARN=$(aws elbv2 describe-target-groups --names shopsmart-backend-tg --query "TargetGroups[0].TargetGroupArn" --output text 2>/dev/null || echo "None")
+          [ "$BACKEND_TG_ARN" != "None" ] && [ -n "$BACKEND_TG_ARN" ] && terraform import aws_lb_target_group.backend $BACKEND_TG_ARN 2>/dev/null || true
+
+          # 6.5 Listener Rule
+          if [ "$ALB_ARN" != "None" ] && [ -n "$ALB_ARN" ]; then
+            LISTENER_ARN=$(aws elbv2 describe-listeners --load-balancer-arn $ALB_ARN --query "Listeners[0].ListenerArn" --output text 2>/dev/null || echo "None")
+            if [ "$LISTENER_ARN" != "None" ] && [ -n "$LISTENER_ARN" ]; then
+              RULE_ARN=$(aws elbv2 describe-rules --listener-arn $LISTENER_ARN --query "Rules[?Priority=='100'].RuleArn" --output text 2>/dev/null | tr -d '[]" \n')
+              if [ "$RULE_ARN" != "None" ] && [ -n "$RULE_ARN" ]; then
+                terraform import aws_lb_listener_rule.backend_api $RULE_ARN 2>/dev/null || true
+              fi
+            fi
+          fi
           
           # 7. ECS Service (The tricky one)
           # We dynamically fetch the Service ARN rather than relying on the short name
@@ -192,6 +208,12 @@ jobs:
           if [ "$SERVICE_ARN" != "None" ] && [ -n "$SERVICE_ARN" ]; then
             echo "Importing ECS Service with ARN: $SERVICE_ARN"
             terraform import aws_ecs_service.app "shopsmart-cluster/shopsmart-service" || true
+          fi
+
+          BACKEND_SERVICE_ARN=$(aws ecs describe-services --cluster shopsmart-cluster --services shopsmart-backend-service --query "services[0].serviceArn" --output text 2>/dev/null || echo "None")
+          if [ "$BACKEND_SERVICE_ARN" != "None" ] && [ -n "$BACKEND_SERVICE_ARN" ]; then
+            echo "Importing Backend ECS Service with ARN: $BACKEND_SERVICE_ARN"
+            terraform import aws_ecs_service.backend "shopsmart-cluster/shopsmart-backend-service" || true
           fi
 
       - name: Terraform Plan
@@ -202,8 +224,8 @@ jobs:
         run: terraform apply -auto-approve tfplan
         working-directory: ./terraform
 
-  container-build-deploy:
-    name: "AWS: ECR Build & ECS Deploy"
+  frontend-deploy:
+    name: "AWS: Frontend ECR Build & ECS Deploy"
     runs-on: ubuntu-latest
     needs: [infrastructure-provisioning]
     steps:
@@ -229,8 +251,6 @@ jobs:
           ECR_REPOSITORY: shopsmart-repo
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          # Build a docker container and push it to ECR
-          # Assumes the Dockerfile is in the root directory or adjust path accordingly
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
@@ -253,5 +273,58 @@ jobs:
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
           service: shopsmart-service
+          cluster: shopsmart-cluster
+          wait-for-service-stability: true
+
+  backend-deploy:
+    name: "AWS: Backend ECR Build & ECS Deploy"
+    runs-on: ubuntu-latest
+    needs: [infrastructure-provisioning]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        working-directory: ./server
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: shopsmart-backend-repo
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Download Task Definition
+        run: |
+          aws ecs describe-task-definition --task-definition shopsmart-backend-task \
+          --query taskDefinition > task-definition.json
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: shopsmart-backend-container
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: shopsmart-backend-service
           cluster: shopsmart-cluster
           wait-for-service-stability: true

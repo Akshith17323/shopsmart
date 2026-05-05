@@ -99,3 +99,90 @@ resource "aws_ecs_service" "app" {
     ManagedBy   = "terraform"
   }
 }
+
+# -----------------------------------------
+# Backend ECS Resources
+# -----------------------------------------
+
+resource "aws_cloudwatch_log_group" "backend_logs" {
+  name              = "/ecs/${var.project_name}-backend"
+  retention_in_days = 30
+
+  tags = {
+    Name        = "${var.project_name}-backend-logs"
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_ecs_task_definition" "backend" {
+  family                   = "${var.project_name}-backend-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = data.aws_iam_role.lab_role.arn
+  task_role_arn            = data.aws_iam_role.lab_role.arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "${var.project_name}-backend-container"
+      image     = "node:20-alpine" # Dummy image to bootstrap the service
+      essential = true
+      portMappings = [
+        {
+          containerPort = 3000 # Node.js port
+          hostPort      = 3000
+          protocol      = "tcp"
+        }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.backend_logs.name
+          "awslogs-region"        = var.region
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
+    }
+  ])
+
+  tags = {
+    Name        = "${var.project_name}-backend-task"
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_ecs_service" "backend" {
+  name            = "${var.project_name}-backend-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.backend.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = [aws_subnet.public_1.id, aws_subnet.public_2.id]
+    security_groups  = [aws_security_group.ecs_tasks.id]
+    assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.backend.arn
+    container_name   = "${var.project_name}-backend-container"
+    container_port   = 3000
+  }
+
+  lifecycle {
+    ignore_changes = [desired_count, task_definition]
+  }
+
+  tags = {
+    Name        = "${var.project_name}-backend-service"
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "terraform"
+  }
+}

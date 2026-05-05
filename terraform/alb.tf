@@ -81,3 +81,48 @@ resource "aws_lb_listener" "http" {
     target_group_arn = aws_lb_target_group.app.arn
   }
 }
+
+# -----------------------------------------
+# Backend Load Balancer Resources
+# -----------------------------------------
+
+resource "aws_lb_target_group" "backend" {
+  name        = "${var.project_name}-backend-tg"
+  port        = 3000
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+
+  health_check {
+    healthy_threshold   = 2
+    unhealthy_threshold = 10
+    timeout             = 5
+    interval            = 10
+    path                = "/api/health" # Backend health check
+    matcher             = "200-399"
+  }
+
+  tags = {
+    Name        = "${var.project_name}-backend-tg"
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "terraform"
+  }
+}
+
+# Route /api/* traffic to the backend target group
+resource "aws_lb_listener_rule" "backend_api" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 100
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/*"]
+    }
+  }
+}
