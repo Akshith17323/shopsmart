@@ -134,6 +134,11 @@ jobs:
         run: terraform validate
         working-directory: ./terraform
 
+      - name: Import State Bucket
+        # We must import the bucket because Terraform uses it for state, so it cannot delete/recreate it!
+        run: terraform import aws_s3_bucket.app_bucket shopsmart-bucket-akshith17323 || true
+        working-directory: ./terraform
+
       - name: Terraform Plan
         run: terraform plan -out=tfplan
         working-directory: ./terraform
